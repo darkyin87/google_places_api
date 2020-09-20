@@ -23,7 +23,6 @@ class GooglePlaces(object):
         'key': self.apiKey
       }
       params = urllib.parse.urlencode(params)
-      print(endpoint_url+params)
       res = requests.get(endpoint_url+params)
       response = json.loads(res.content)
       if response['status'] != 'OK':
@@ -48,21 +47,10 @@ import csv
 with open("input.csv", "r") as f:
   reader = csv.reader(f, delimiter=",")
   for row in reader:
-  #   full_address = row[0]
-  #   if row[1]:
-  #     full_address += "," + row[1]
-  #   if row[2]:
-  #     full_address += "," + row[2]
-  #   if row[3]:
-  #     full_address += "," + row[3]
     address_set.add(tuple(row))
 
   for item in address_set:
     addresses.append(list(item))
-
-  # print(len(addresses))
-  # print(addresses)
-
 
 result_file = open("BOA_Activities_OperationalStatus.csv", "w")
 
