@@ -3,6 +3,7 @@ import json
 import requests
 from dotenv import load_dotenv
 import csv
+import urllib.parse
 
 class GooglePlaces(object):
     def __init__(self, apiKey):
@@ -10,11 +11,18 @@ class GooglePlaces(object):
         self.apiKey = apiKey
         self.missing = open("Missing_Activities.csv", "w")
 
-    def search_places_by_query(self, query):
+    def search_places_by_query(self, address_arr):
+      query = ",".join(address_arr)
       inputtype = 'textquery'
-      fields='business_status,formatted_address'
-      endpoint_url = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
-      params="?fields={}&inputtype={}&input={}&key={}".format(fields, inputtype, query, self.apiKey)
+      fields='name,business_status,formatted_address'
+      endpoint_url = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json?"
+      params = {
+        'fields': fields,
+        'inputtype': inputtype,
+        'input': query,
+        'key': self.apiKey
+      }
+      params = urllib.parse.urlencode(params)
       print(endpoint_url+params)
       res = requests.get(endpoint_url+params)
       response = json.loads(res.content)
@@ -35,28 +43,32 @@ places = GooglePlaces(API_KEY)
 results = []
 
 addresses = []
+address_set = set()
 import csv
 with open("input.csv", "r") as f:
-  # lines = f.read().splitlines()
-  # parts = lines.spli(",")
   reader = csv.reader(f, delimiter=",")
   for row in reader:
-    full_address = row[0]
-    if row[1]:
-      full_address += "," + row[1]
-    if row[2]:
-      full_address += "," + row[2]
-    if row[3]:
-      full_address += "," + row[3]
-    addresses.append(full_address)
+  #   full_address = row[0]
+  #   if row[1]:
+  #     full_address += "," + row[1]
+  #   if row[2]:
+  #     full_address += "," + row[2]
+  #   if row[3]:
+  #     full_address += "," + row[3]
+    address_set.add(tuple(row))
 
-# print (addresses)
+  for item in address_set:
+    addresses.append(list(item))
 
-
+  # print(len(addresses))
+  # print(addresses)
 
 
 result_file = open("BOA_Activities_OperationalStatus.csv", "w")
-result_file.write("'name', 'formatted_address', 'business_status'\n")
+
+csvwriter = csv.writer(result_file)
+fields = ['input_name', 'input_address', 'output_name', 'output_address' , 'business_status']
+csvwriter.writerow(fields)
 
 for address in addresses:
   print("Searching for address: {}".format(address))
@@ -64,24 +76,17 @@ for address in addresses:
   if candidates is None:
     continue
   for candidate in candidates:
-    candidate['name'] = "'{}'".format(address)
+    candidate['input_name'] = "{}".format(address[0])
+    candidate['input_address'] = ", ".join(address[1:])
 
-    result_file.write("{}, {}, {}\n".format(
+    row = [
+      candidate['input_name'],
+      candidate['input_address'],
       candidate['name'],
       candidate['formatted_address'],
-      candidate['business_status'] if 'business_status' in candidate else 'NOT_FOUND')
-    )
-    results.append(candidate)
+      candidate['business_status'] if 'business_status' in candidate else 'NOT_FOUND'
+    ]
+    csvwriter.writerow(row)
 
 result_file.close()
 
-
-
-# print(results)
-# csv_columns = ['name', 'formatted_address', 'business_status']
-# output_file = 'output.csv'
-# with open(output_file, 'w') as csvfile:
-#   writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-#   writer.writeheader()
-#   for data in results:
-#       writer.writerow(data)
